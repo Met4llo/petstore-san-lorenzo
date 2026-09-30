@@ -1,0 +1,12 @@
+{
+  "storeId": "san-lorenzo",
+  "storeName": "San Lorenzo",
+  "supabaseUrl": "https://yjwhgwzrrkxjjhoipidj.supabase.co",
+  "publishableKey": "sb_publishable_fgxqfepwv7cF3Mmz61Dm4g_MsX6WvhO",
+  "operators": {
+    "Sepi": "sepi@san-lorenzo.petstore.invalid",
+    "Liborio": "liborio@san-lorenzo.petstore.invalid",
+    "Daniela": "daniela@san-lorenzo.petstore.invalid",
+    "Francesco": "francesco@san-lorenzo.petstore.invalid"
+  }
+}

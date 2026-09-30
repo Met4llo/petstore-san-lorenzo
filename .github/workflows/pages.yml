@@ -1,0 +1,50 @@
+name: San Lorenzo - controlli e pubblicazione
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Pubblicare San Lorenzo dopo la verifica degli accessi?
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: san-lorenzo-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: san-lorenzo-review
+          path: dist/san-lorenzo
+          include-hidden-files: true
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        with:
+          path: dist/san-lorenzo
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pubblica solo San Lorenzo
+        id: deployment
+        uses: actions/deploy-pages@v4

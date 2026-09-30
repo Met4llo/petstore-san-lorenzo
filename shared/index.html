@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#b84e27">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Pet Store · San Lorenzo</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
+  <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script defer src="config.js"></script>
+  <script defer src="core.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main>
+    <section id="login" class="login">
+      <p class="eyebrow">Pet Store</p><h1>San Lorenzo</h1>
+      <p>Tocca il tuo nome per entrare.</p>
+      <div class="operators">
+        <button data-operator="Sepi"><strong>Sepi</strong><span>Responsabile</span></button>
+        <button data-operator="Liborio"><strong>Liborio</strong><span>Operatore</span></button>
+        <button data-operator="Daniela"><strong>Daniela</strong><span>Operatrice</span></button>
+        <button data-operator="Francesco"><strong>Francesco</strong><span>Operatore</span></button>
+      </div>
+      <form id="login-form" hidden>
+        <h2 id="login-name"></h2>
+        <label id="admin-email-label" hidden>Email amministratore<input id="admin-email" type="email" autocomplete="username"></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+        <button id="login-submit" class="primary">Entra</button><button type="button" id="login-back">Cambia operatore</button>
+      </form>
+      <p id="login-status" role="status"></p>
+      <button id="admin-login" class="link">Accesso amministratore</button>
+    </section>
+    <section id="workspace" hidden>
+      <header><div><p class="eyebrow">Pet Store</p><h1>San Lorenzo</h1><p id="identity"></p></div><button id="logout">Esci / Cambia operatore</button></header>
+      <nav aria-label="Sezioni"><button data-view="products" class="active">Scadenze</button><button data-view="board">Bacheca</button><button data-view="settings">Impostazioni</button></nav>
+      <p id="sync-status" role="status"></p>
+      <div class="toolbar"><button id="sync">Sincronizza</button><span id="queue-count"></span></div>
+      <section id="view-products">
+        <div id="stats" class="stats"></div>
+        <div class="toolbar"><label class="search">Cerca prodotto<input id="search" type="search" placeholder="EAN, nome o fornitore"></label><button id="scan">Scansiona</button></div>
+        <section id="scanner" hidden><div id="reader"></div><button id="stop-scan">Ferma fotocamera</button></section>
+        <div class="toolbar">
+          <label>Filtro<select id="filter"><option value="no-date">Senza data</option><option value="all">Tutti</option><option value="expired">Scaduti</option><option value="urgent">Entro 7 giorni</option><option value="attention">Entro 30 giorni</option><option value="monitor">Entro 120 giorni</option><option value="unsignaled">Da segnalare</option><option value="signaled">Segnalati</option><option value="managed">Gestiti</option><option value="no-expiry">Senza scadenza</option><option value="absent">Non in negozio</option></select></label>
+          <label>Fornitore<select id="supplier"><option value="">Tutti</option></select></label>
+        </div>
+        <div class="toolbar"><button id="add-product">Aggiungi prodotto</button><button id="export-csv">Esporta lista CSV</button><button id="print">Stampa</button></div>
+        <p id="list-count"></p><div id="products" class="products"></div><button id="show-more" hidden>Mostra altri prodotti</button>
+      </section>
+      <section id="view-board" hidden><h2>Bacheca di San Lorenzo</h2><form id="message-form"><label>Messaggio<textarea id="message" maxlength="1000" required></textarea></label><button class="primary">Pubblica</button></form><div id="messages"></div></section>
+      <section id="view-settings" hidden><h2>Impostazioni</h2><form id="password-form"><label>Password attuale<input id="old-password" type="password" autocomplete="current-password" required></label><label>Nuova password<input id="new-password" type="password" autocomplete="new-password" minlength="12" required></label><label>Conferma nuova password<input id="confirm-password" type="password" autocomplete="new-password" minlength="12" required></label><button class="primary">Aggiorna password</button></form><button id="backup">Esporta dati e modifiche in attesa</button><p>I dati di San Lorenzo sono separati da La Malfa.</p><p id="admin-note" hidden>Accesso amministratore a San Lorenzo. L’integrazione con La Malfa richiede una configurazione separata.</p></section>
+    </section>
+  </main>
+  <dialog id="detail">
+    <form id="product-form"><h2 id="detail-title"></h2>
+      <label>EAN<input id="ean" inputmode="numeric" pattern="[0-9]{5,14}" required></label>
+      <label>Nome<input id="name" maxlength="240" required></label>
+      <label>Fornitore<select id="detail-supplier" required></select></label>
+      <label>Scadenza<input id="expiry" type="date"></label>
+      <label class="check"><input id="no-expiry" type="checkbox">Prodotto senza scadenza</label>
+      <label>Stato<select id="state"><option value="">Da controllare</option><option value="signaled">Segnalato</option><option value="managed">Gestito</option></select></label>
+      <label class="check"><input id="absent" type="checkbox">Non presente in negozio</label>
+      <label>Note<textarea id="note" maxlength="280"></textarea></label>
+      <p id="supplier-condition"></p><p id="detail-status" role="status"></p>
+      <div class="toolbar"><button id="save" class="primary">Salva</button><button type="button" id="close-detail">Chiudi</button></div>
+      <button type="button" id="discard-pending" hidden>Confronta con il negozio / Scarta modifica locale</button><h3>Storico modifiche</h3><div id="history"></div>
+    </form>
+  </dialog>
+  <div id="toast" role="status" hidden></div>
+</body>
+</html>
