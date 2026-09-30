@@ -1,6 +1,6 @@
 'use strict';
 const CACHE='san-lorenzo-shell-v1';
-const ASSETS=['./','./index.html','./styles.css','./core.js','./app.js','./manifest.json','./icon.svg','./products.json','./accessory-eans.json','./supplier-conditions.json','./suppliers.json'];
+const ASSETS=['./','./index.html','./styles.css','./la-malfa.css','./sheet-overlay.css','./logo-petstore.png','./core.js','./app.js','./manifest.json','./icon.svg','./products.json','./accessory-eans.json','./supplier-conditions.json','./suppliers.json'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('san-lorenzo-shell-')&&key!==CACHE).map(key=>caches.delete(key))))));
 self.addEventListener('fetch',event=>{

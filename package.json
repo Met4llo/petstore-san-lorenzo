@@ -1,9 +1,9 @@
 {
-  "name":"petstore-platform",
-  "private":true,
-  "scripts":{
-    "build":"node scripts/build.mjs san-lorenzo",
-    "test":"node tests/core.test.cjs && node tests/build.test.cjs",
-    "check":"node --check shared/app.js && node --check shared/sw.js && node --check scripts/build.mjs"
+  "name": "petstore-platform",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs san-lorenzo",
+    "test": "node tests/core.test.cjs && node tests/build.test.cjs && node tests/ui.test.cjs",
+    "check": "node --check shared/app.js && node --check shared/sw.js && node --check scripts/build.mjs"
   }
 }

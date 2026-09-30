@@ -1,75 +1,33 @@
 <!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#b84e27">
-  <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Pet Store · San Lorenzo</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
-  <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script defer src="config.js"></script>
-  <script defer src="core.js"></script>
-  <script defer src="app.js"></script>
-</head>
-<body>
-  <main>
-    <section id="login" class="login">
-      <p class="eyebrow">Pet Store</p><h1>San Lorenzo</h1>
-      <p>Tocca il tuo nome per entrare.</p>
-      <div class="operators">
-        <button data-operator="Sepi"><strong>Sepi</strong><span>Responsabile</span></button>
-        <button data-operator="Liborio"><strong>Liborio</strong><span>Operatore</span></button>
-        <button data-operator="Daniela"><strong>Daniela</strong><span>Operatrice</span></button>
-        <button data-operator="Francesco"><strong>Francesco</strong><span>Operatore</span></button>
-      </div>
-      <form id="login-form" hidden>
-        <h2 id="login-name"></h2>
-        <label id="admin-email-label" hidden>Email amministratore<input id="admin-email" type="email" autocomplete="username"></label>
-        <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
-        <button id="login-submit" class="primary">Entra</button><button type="button" id="login-back">Cambia operatore</button>
-      </form>
-      <p id="login-status" role="status"></p>
-      <button id="admin-login" class="link">Accesso amministratore</button>
-    </section>
-    <section id="workspace" hidden>
-      <header><div><p class="eyebrow">Pet Store</p><h1>San Lorenzo</h1><p id="identity"></p></div><button id="logout">Esci / Cambia operatore</button></header>
-      <nav aria-label="Sezioni"><button data-view="products" class="active">Scadenze</button><button data-view="board">Bacheca</button><button data-view="settings">Impostazioni</button></nav>
-      <p id="sync-status" role="status"></p>
-      <div class="toolbar"><button id="sync">Sincronizza</button><span id="queue-count"></span></div>
-      <section id="view-products">
-        <div id="stats" class="stats"></div>
-        <div class="toolbar"><label class="search">Cerca prodotto<input id="search" type="search" placeholder="EAN, nome o fornitore"></label><button id="scan">Scansiona</button></div>
-        <section id="scanner" hidden><div id="reader"></div><button id="stop-scan">Ferma fotocamera</button></section>
-        <div class="toolbar">
-          <label>Filtro<select id="filter"><option value="no-date">Senza data</option><option value="all">Tutti</option><option value="expired">Scaduti</option><option value="urgent">Entro 7 giorni</option><option value="attention">Entro 30 giorni</option><option value="monitor">Entro 120 giorni</option><option value="unsignaled">Da segnalare</option><option value="signaled">Segnalati</option><option value="managed">Gestiti</option><option value="no-expiry">Senza scadenza</option><option value="absent">Non in negozio</option></select></label>
-          <label>Fornitore<select id="supplier"><option value="">Tutti</option></select></label>
-        </div>
-        <div class="toolbar"><button id="add-product">Aggiungi prodotto</button><button id="export-csv">Esporta lista CSV</button><button id="print">Stampa</button></div>
-        <p id="list-count"></p><div id="products" class="products"></div><button id="show-more" hidden>Mostra altri prodotti</button>
-      </section>
-      <section id="view-board" hidden><h2>Bacheca di San Lorenzo</h2><form id="message-form"><label>Messaggio<textarea id="message" maxlength="1000" required></textarea></label><button class="primary">Pubblica</button></form><div id="messages"></div></section>
-      <section id="view-settings" hidden><h2>Impostazioni</h2><form id="password-form"><label>Password attuale<input id="old-password" type="password" autocomplete="current-password" required></label><label>Nuova password<input id="new-password" type="password" autocomplete="new-password" minlength="12" required></label><label>Conferma nuova password<input id="confirm-password" type="password" autocomplete="new-password" minlength="12" required></label><button class="primary">Aggiorna password</button></form><button id="backup">Esporta dati e modifiche in attesa</button><p>I dati di San Lorenzo sono separati da La Malfa.</p><p id="admin-note" hidden>Accesso amministratore a San Lorenzo. L’integrazione con La Malfa richiede una configurazione separata.</p></section>
-    </section>
-  </main>
-  <dialog id="detail">
-    <form id="product-form"><h2 id="detail-title"></h2>
-      <label>EAN<input id="ean" inputmode="numeric" pattern="[0-9]{5,14}" required></label>
-      <label>Nome<input id="name" maxlength="240" required></label>
-      <label>Fornitore<select id="detail-supplier" required></select></label>
-      <label>Scadenza<input id="expiry" type="date"></label>
-      <label class="check"><input id="no-expiry" type="checkbox">Prodotto senza scadenza</label>
-      <label>Stato<select id="state"><option value="">Da controllare</option><option value="signaled">Segnalato</option><option value="managed">Gestito</option></select></label>
-      <label class="check"><input id="absent" type="checkbox">Non presente in negozio</label>
-      <label>Note<textarea id="note" maxlength="280"></textarea></label>
-      <p id="supplier-condition"></p><p id="detail-status" role="status"></p>
-      <div class="toolbar"><button id="save" class="primary">Salva</button><button type="button" id="close-detail">Chiudi</button></div>
-      <button type="button" id="discard-pending" hidden>Confronta con il negozio / Scarta modifica locale</button><h3>Storico modifiche</h3><div id="history"></div>
-    </form>
-  </dialog>
-  <div id="toast" role="status" hidden></div>
-</body>
-</html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#c45a2a"><meta name="apple-mobile-web-app-capable" content="yes"><title>Pet Store San Lorenzo</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="logo-petstore.png"><link rel="apple-touch-icon" href="logo-petstore.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="la-malfa.css"><link rel="stylesheet" href="sheet-overlay.css"><link rel="stylesheet" href="styles.css">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script><script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><script defer src="config.js"></script><script defer src="core.js"></script><script defer src="app.js"></script></head><body>
+<section id="login" class="screen login-screen"><div class="login-box"><img src="logo-petstore.png" class="logo-login" alt="PetStore Conad"><h1>Accesso operatori</h1><p class="subtitle">Tocca il tuo nome</p><div id="operator-grid" class="operator-grid">
+<button type="button" class="operator-card operator-btn" data-operator="Sepi" data-color="santoemma"><span class="op-initial">S</span><span class="op-name">Sepi</span></button><button type="button" class="operator-card operator-btn" data-operator="Liborio" data-color="fuschi"><span class="op-initial">L</span><span class="op-name">Liborio</span></button><button type="button" class="operator-card operator-btn" data-operator="Daniela" data-color="pizzimenti"><span class="op-initial">D</span><span class="op-name">Daniela</span></button><button type="button" class="operator-card operator-btn" data-operator="Francesco" data-color="sorrentino"><span class="op-initial">F</span><span class="op-name">Francesco</span></button></div><p class="login-version">San Lorenzo</p><button id="admin-login" class="btn-text-back">Accesso amministratore</button>
+<form id="login-form" hidden><h1 id="login-name"></h1><p class="subtitle">Inserisci la tua password personale</p><label id="admin-email-label" hidden>Email amministratore<input id="admin-email" type="email" autocomplete="username"></label><input id="password" type="password" placeholder="Password" autocomplete="current-password" required><button id="login-submit" class="btn btn-primary btn-large">Entra</button><button type="button" id="login-back" class="btn-text-back">Cambia operatore</button></form><p id="login-status" class="error" role="status"></p></div></section>
+<section id="workspace" hidden><header class="header"><div class="logo-menu-wrap"><button id="logo-menu" type="button" class="logo-menu-btn" aria-label="Apri menu" aria-expanded="false"><img src="logo-petstore.png" alt="PetStore" class="logo-header"><span class="logo-menu-caret">▾</span></button><div id="logo-dropdown" class="logo-dropdown" hidden><button class="logo-dropdown-item" data-view="home">Home</button><button class="logo-dropdown-item" data-view="scanner">Scanner / Cerca</button><button class="logo-dropdown-item" data-view="products">Lista scadenze</button><button id="absent-menu" class="logo-dropdown-item">Non in negozio</button><div class="logo-dropdown-divider"></div><button class="logo-dropdown-item" data-view="settings">Impostazioni</button></div></div><div class="header-actions"><button id="identity" class="current-op" type="button" title="Cambia operatore"></button><button id="sync" class="icon-btn" aria-label="Sincronizza"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button></div></header>    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="home">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg></span>
+        <span>Home</span>
+        <span id="home-nav-count" class="nav-badge hidden">0</span>
+      </button>
+      <button class="nav-btn" data-view="products">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+        <span>Lista</span>
+      </button>
+      <button class="nav-btn" data-view="scanner">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg></span>
+        <span>Scanner</span>
+      </button>
+    </nav>
+
+
+<main class="main">
+<section id="view-home" class="page active"><div class="oggi-box"><p class="dash-kicker" style="margin:0 0 8px">Cosa fare oggi</p><div id="today" class="oggi-list"></div></div><p class="dash-kicker">Stato negozio</p><div id="stats" class="stats-grid stats-grid-home"></div><div class="bacheca-box"><div class="bacheca-header"><h3>Bacheca</h3><button id="new-message" class="btn-small">Messaggio</button></div><div class="bacheca-tools"><input id="board-search" class="bacheca-search" type="search" placeholder="Cerca in bacheca"></div><div id="messages" class="bacheca-list"></div><form id="message-form" class="bacheca-form" hidden><textarea id="message" rows="3" maxlength="1000" placeholder="Scrivi un messaggio per il team..." required></textarea><div class="bacheca-form-actions"><button class="btn btn-primary">Pubblica</button><button type="button" id="cancel-message" class="btn btn-secondary">Annulla</button></div></form></div><p id="queue-count" class="pending-cloud" hidden></p><p id="sync-status" class="sync-status" role="status">Mai sincronizzato · tocca per aggiornare</p><div class="quick-actions"><button id="home-scan" class="btn btn-primary btn-large">Scansiona / Cerca prodotto</button><button id="home-signal" class="btn btn-secondary btn-large" style="margin-top:8px">Prodotti da segnalare</button><button id="add-product" class="btn-text-back" style="display:block;width:100%;margin-top:12px">Aggiungi prodotto</button></div></section>
+<section id="view-scanner" class="page" hidden><p class="dash-kicker">Scanner</p><div class="scanner-section"><div id="scanner" hidden><div id="reader" class="scanner-box"></div></div><p class="scanner-hint">Avvicina l’EAN a 10–20 cm dalla fotocamera.</p><button id="scan" class="btn btn-primary btn-large">Avvia fotocamera</button><button id="stop-scan" class="btn btn-secondary btn-large" hidden>Ferma scanner</button></div><div class="search-panel"><p class="dash-kicker">Oppure cerca</p><input id="scanner-search" class="search-input" type="search" placeholder="EAN o nome prodotto"><div id="scanner-results" class="product-list"></div><button id="scanner-add" class="btn-text-back" style="display:block;width:100%;margin-top:16px">Aggiungi prodotto manualmente</button></div></section>
+<section id="view-products" class="page" hidden><p id="list-title" class="dash-kicker" style="margin:0 0 10px">Senza data</p><select id="filter" class="sr-only" tabindex="-1" aria-hidden="true"><option value="no-date">Senza data</option><option value="all">Tutti</option><option value="expired">Scaduti</option><option value="urgent">7 gg</option><option value="attention">30 gg</option><option value="monitor">120 gg</option><option value="unsignaled">Da segnalare</option><option value="signaled">Segnalati</option><option value="managed">Gestiti</option><option value="no-expiry">Esclusi</option><option value="absent">Non in negozio</option></select><div class="list-chips" role="group" aria-label="Filtri lista"><button type="button" class="list-chip" data-filter="no-date">Senza data</button><button type="button" class="list-chip" data-filter="expired">Scaduti</button><button type="button" class="list-chip" data-filter="urgent">7 gg</button><button type="button" class="list-chip" data-filter="attention">30 gg</button><button type="button" class="list-chip" data-filter="monitor">120 gg</button><button type="button" class="list-chip" data-filter="unsignaled">Da segnalare</button><button type="button" class="list-chip" data-filter="signaled">Segnalati</button><button type="button" class="list-chip" data-filter="managed">Gestiti</button><button type="button" class="list-chip" data-filter="no-expiry">Esclusi</button></div><p id="list-count" class="list-count"></p><label class="list-supplier-lab" for="supplier">Fornitore</label><div class="list-supplier-row"><select id="supplier" class="list-supplier"><option value="">Tutti i fornitori</option></select></div><input id="search" class="list-search" type="search" placeholder="Cerca nome, EAN o fornitore"><button id="export-csv" class="btn btn-secondary btn-large" style="margin:10px 0 8px">Esporta questa lista</button><button id="print" class="btn btn-secondary btn-large" style="margin:0 0 12px">Stampa / PDF</button><div id="products" class="product-list"></div><button id="show-more" class="btn btn-secondary btn-large" hidden>Mostra altri prodotti</button></section>
+<section id="view-settings" class="page" hidden><p class="dash-kicker">Impostazioni</p><div class="settings-group"><label>Tu</label><p id="settings-identity" class="settings-op-name"></p><button id="logout" class="btn btn-secondary btn-large">Esci / Cambia operatore</button></div><div class="settings-group"><label>Aspetto</label><p class="field-hint">Modalità chiara o scura</p><div class="theme-toggle"><button id="theme-light" class="theme-btn" type="button">Chiara</button><button id="theme-dark" class="theme-btn" type="button">Scura</button></div><p class="field-hint" style="margin-top:14px">Liste compatte: più prodotti a schermo in corsia.</p><div class="theme-toggle"><button id="density-comfy" class="theme-btn" type="button">Comode</button><button id="density-compact" class="theme-btn" type="button">Compatte</button></div></div><div class="settings-group"><label>Password</label><p class="field-hint">Solo per l’operatore collegato</p><form id="password-form"><input id="old-password" type="password" placeholder="Password attuale" autocomplete="current-password" required><input id="new-password" type="password" placeholder="Nuova password" autocomplete="new-password" minlength="12" required><input id="confirm-password" type="password" placeholder="Conferma password" autocomplete="new-password" minlength="12" required><button class="btn btn-primary btn-large" style="margin-top:10px">Salva password</button></form></div><div class="settings-group"><button id="backup" class="btn btn-secondary">Esporta backup</button></div><p id="admin-note" class="field-hint" hidden>Accesso amministratore di San Lorenzo. La Malfa continua a usare il proprio accesso.</p><p class="info">Pet Store San Lorenzo</p></section>
+</main></section>
+<dialog id="detail"><button type="button" id="close-detail" class="btn-back">← Indietro</button><form id="product-form" class="detail-stack"><div class="detail-card"><h2 id="detail-title" class="detail-name"></h2><div id="detail-badge"></div></div><div class="detail-card"><div class="detail-row"><label>Codice a barre (EAN)</label><input id="ean" inputmode="numeric" pattern="[0-9]{5,14}" required></div><div class="detail-row"><label>Nome prodotto</label><input id="name" maxlength="240" required></div><div class="detail-row"><label>Fornitore</label><select id="detail-supplier" required><option value="">— Seleziona fornitore —</option></select></div><div class="detail-row"><label>Data di scadenza</label><input id="expiry" type="date"></div><label class="check-label"><input id="no-expiry" type="checkbox">Senza scadenza</label><div class="detail-row"><label>Stato</label><select id="state"><option value="">Da controllare</option><option value="signaled">Segnalato</option><option value="managed">Gestito</option></select></div><label class="check-label"><input id="absent" type="checkbox">Non presente in negozio</label><div class="detail-row"><label>Note</label><textarea id="note" maxlength="280"></textarea></div><p id="supplier-condition" class="field-hint"></p><p id="detail-status" class="error" role="status"></p><button id="save" class="btn btn-primary btn-large">Salva</button><button type="button" id="discard-pending" class="btn btn-secondary btn-large" hidden>Confronta con il negozio / Scarta modifica locale</button></div><div class="detail-card"><h3>Storico modifiche</h3><div id="history"></div></div></form></dialog><div id="toast" class="toast" role="status" hidden></div></body></html>

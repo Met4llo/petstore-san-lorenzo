@@ -1,1 +1,16 @@
-{"name":"Pet Store San Lorenzo","short_name":"San Lorenzo","start_url":"./","scope":"./","display":"standalone","theme_color":"#b84e27","background_color":"#f7f3ed","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{
+  "name": "Pet Store San Lorenzo",
+  "short_name": "San Lorenzo",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#c45a2a",
+  "background_color": "#f6f1ea",
+  "icons": [
+    {
+      "src": "logo-petstore.png",
+      "type": "image/png",
+      "sizes": "any"
+    }
+  ]
+}

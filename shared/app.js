@@ -5,18 +5,19 @@ const config = window.PETSTORE_CONFIG;
 const $ = id => document.getElementById(id);
 let client, db, catalog = [], accessories = [], conditions = {}, suppliers = [];
 let profile = null, user = null, state = {rows:[],pending:[]}, products = [], selected = null;
+let currentView='home';
 let loginName = null, syncRunning = false, scanner = null, limit = 100, generation = 0, timer;
 const backendScope = () => new URL(config.supabaseUrl).hostname;
 const cacheKey = () => `${backendScope()}:${config.storeId}:${user.id}`;
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(timer); timer = setTimeout(()=>{$('toast').hidden=true;},5000); }
 function requireUser() { if (!user || !profile) throw new Error('Accedi prima di continuare.'); }
-function refresh() { products = C.merge(catalog,state.rows,state.pending,accessories); render(); $('queue-count').textContent = state.pending.length ? `${state.pending.length} modifiche in attesa` : 'Tutto inviato'; }
+function refresh() { products = C.merge(catalog,state.rows,state.pending,accessories); render(); $('queue-count').hidden=!state.pending.length;$('queue-count').textContent = state.pending.length ? `${state.pending.length} modifiche in attesa` : 'Tutto inviato'; }
 function openDB() { return new Promise((resolve,reject)=>{ const req=indexedDB.open('PetStoreSecure-'+config.storeId,1); req.onupgradeneeded=()=>req.result.createObjectStore('snapshots'); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }); }
 function readSnapshot(key) { return new Promise((resolve,reject)=>{const tx=db.transaction('snapshots','readonly');const req=tx.objectStore('snapshots').get(key);req.onsuccess=()=>resolve(req.result || {rows:[],pending:[]});req.onerror=()=>reject(req.error);}); }
 function persist(next = state, key = cacheKey()) { const snapshot=structuredClone(next); return new Promise((resolve,reject)=>{const tx=db.transaction('snapshots','readwrite');tx.objectStore('snapshots').put(snapshot,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error || new Error('Memoria locale non disponibile'));}); }
 async function fetchAll(table) { const rows=[];for(let offset=0;;offset+=1000){const {data,error}=await client.from(table).select('*').eq('store_id',C.STORE).order('ean').range(offset,offset+999);if(error)throw error;rows.push(...data);if(data.length<1000)return rows;} }
-function showLogin(name) { loginName=name; $('login-form').hidden=false;$('login-name').textContent=name || 'Amministratore';$('admin-email-label').hidden=!!name;$('admin-email').required=!name;$('password').value='';$('login-status').textContent='';$('password').focus(); }
-function hideAccount() { $('workspace').hidden=true;$('login').hidden=false;$('products').replaceChildren();$('messages').replaceChildren();$('history').replaceChildren();$('detail').close();$('identity').textContent='';$('queue-count').textContent='';$('sync-status').textContent='';selected=null;state={rows:[],pending:[]};products=[];user=null;profile=null; }
+function showLogin(name) { $('operator-grid').hidden=true; loginName=name; $('login-form').hidden=false;$('login-name').textContent=name || 'Amministratore';$('admin-email-label').hidden=!!name;$('admin-email').required=!name;$('password').value='';$('login-status').textContent='';$('password').focus(); }
+function hideAccount() { $('workspace').hidden=true;$('login').hidden=false;$('products').replaceChildren();$('messages').replaceChildren();$('history').replaceChildren();$('detail').close();$('operator-grid').hidden=false;$('identity').textContent='';$('queue-count').textContent='';$('sync-status').textContent='';selected=null;state={rows:[],pending:[]};products=[];user=null;profile=null; }
 async function signOut() {
   if(syncRunning) {toast('Attendi la fine della sincronizzazione prima di cambiare operatore.');return;}
   generation++; await stopScanner();hideAccount();$('login-form').hidden=true;
@@ -30,7 +31,7 @@ async function acceptSession(authUser, expectedName = null) {
   if(epoch!==generation)return;
   $('login').hidden=true;$('workspace').hidden=false;$('login-form').hidden=true;$('password').value='';
   $('identity').textContent=profile.display_name+(profile.role==='manager'?' · Responsabile':profile.role==='admin'?' · Amministratore':'');
-  $('admin-note').hidden=profile.role!=='admin';refresh();await sync();
+  $('settings-identity').textContent=$('identity').textContent;$('admin-note').hidden=profile.role!=='admin';navigate('home');refresh();await sync();
 }
 async function login(event) {
   event.preventDefault();if(!client)return;$('login-submit').disabled=true;$('login-status').textContent='Accesso in corso…';
@@ -70,16 +71,43 @@ async function sync() {
 }
 function filtered() {return products.filter(p=>C.matches(p,$('filter').value,$('search').value.trim(),$('supplier').value)).sort((a,b)=>(a.name||'').localeCompare(b.name||'','it'));}
 function badge(p) { if(p.absent)return ['Non in negozio',''];if(p.noExpiry)return ['Senza scadenza',''];if(p.managed)return ['Gestito','managed'];const n=C.days(p.expiry);if(n===null)return ['Senza data',''];if(p.signaled)return ['Segnalato','managed'];if(n<=0)return [n===0?'Scaduto oggi':`Scaduto da ${-n} giorni`,'expired'];return [`${n} giorni`,n<=7?'urgent':'']; }
+function navigate(view) {
+  currentView=view;stopScanner();$('logo-dropdown').hidden=true;$('logo-menu').setAttribute('aria-expanded','false');
+  ['home','products','scanner','settings'].forEach(v=>{const el=$('view-'+v);el.hidden=v!==view;el.classList.toggle('active',v===view);});
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  if(view==='products')render();if(view==='scanner')renderScannerResults();
+}
+function filterList(value) { $('filter').value=value;limit=100;navigate('products');render(); }
+function productCard(p) {
+  const button=document.createElement('button');button.type='button';
+  const n=C.days(p.expiry);const cls=p.noExpiry?'ok':n===null?'nodate':n<=0?'expired':n<=7?'urgent':n<=30?'attention':n<=120?'monitor':'ok';
+  button.className='product-card '+cls;const top=document.createElement('div');top.className='product-card-top';const title=document.createElement('div');title.className='product-name';title.textContent=p.name;top.append(title);
+  const [text,style]=badge(p);const tag=document.createElement('span');tag.className='badge '+(p.managed?'gestito':p.noExpiry?'no-expiry':p.signaled?'signaled':style || cls);tag.textContent=text;top.append(tag);button.append(top);
+  const meta=document.createElement('div');meta.className='product-meta';const supplier=document.createElement('span');supplier.className='product-supplier';supplier.textContent=p.supplier;const ean=document.createElement('span');ean.className='product-ean';ean.textContent=p.ean;meta.append(supplier,ean);button.append(meta);
+  if(p.note){const note=document.createElement('p');note.className='product-note';note.textContent=p.note;button.append(note);}
+  if(state.pending.some(op=>op.product.ean===p.ean)){const pending=document.createElement('p');pending.className='field-hint';pending.textContent='Modifica in attesa di invio';button.append(pending);}
+  button.onclick=()=>openProduct(p);return button;
+}
+function renderScannerResults() {
+  const q=$('scanner-search').value.trim().toLowerCase();const items=q.length>=2?products.filter(p=>(p.ean+' '+p.name+' '+p.supplier).toLowerCase().includes(q)).slice(0,50):[];
+  $('scanner-results').replaceChildren(...items.map(productCard));
+}
 function render() {
   if(!user)return;const visible=filtered();$('list-count').textContent=`${visible.length} prodotti · ${Math.min(limit,visible.length)} visualizzati`;
-  const frag=document.createDocumentFragment();visible.slice(0,limit).forEach(p=>{const b=document.createElement('button');b.className='product';const title=document.createElement('h3');title.textContent=p.name;b.append(title);const meta=document.createElement('div');meta.className='meta';meta.textContent=p.ean+' · '+p.supplier;b.append(meta);const [text,style]=badge(p);const tag=document.createElement('span');tag.className='badge '+style;tag.textContent=text;b.append(tag);if(state.pending.some(op=>op.product.ean===p.ean)){const pending=document.createElement('p');pending.className='meta';pending.textContent='Modifica in attesa di invio';b.append(pending);}b.onclick=()=>openProduct(p);frag.append(b);});$('products').replaceChildren(frag);$('show-more').hidden=visible.length<=limit;
-  const stats=[['Scaduti',products.filter(p=>C.matches(p,'expired','','')).length],['Entro 7 giorni',products.filter(p=>C.matches(p,'urgent','','')).length],['Senza data',products.filter(p=>C.matches(p,'no-date','','')).length]];
-  $('stats').replaceChildren(...stats.map(([label,n])=>{const el=document.createElement('div');el.className='stat';const strong=document.createElement('strong');strong.textContent=n;el.append(strong,document.createTextNode(label));return el;}));
+  $('products').replaceChildren(...visible.slice(0,limit).map(productCard));$('show-more').hidden=visible.length<=limit;
+  const value=$('filter').value;$('list-title').textContent=$('filter').selectedOptions[0].textContent;
+  document.querySelectorAll('.list-chip').forEach(button=>button.classList.toggle('active',button.dataset.filter===value));
+  const count=kind=>products.filter(p=>C.matches(p,kind,'','')).length;
+  const expired=count('expired'),urgent=count('urgent');
+  const stats=[['Urgenti',expired+urgent,expired?'expired':'urgent','urgent',expired?`${expired} scaduti · ${urgent} ≤7gg`:'entro 7 giorni'],['Da segnalare',count('unsignaled'),'unsignaled','unsignaled','scadenze ≤120gg non segnalate'],['30 giorni',count('attention')-urgent,'attention','attention','da monitorare a breve'],['120 giorni',count('monitor')-count('attention'),'monitor','monitor','orizzonte medio'],['Senza data',count('no-date'),'no-date','nodate','ancora da inserire']];
+  $('stats').replaceChildren(...stats.map(([label,n,filter,cls,sub])=>{const el=document.createElement('button');el.type='button';el.className='stat-card '+cls+(n===0?' ok-empty':'');const text=document.createElement('div');text.className='stat-card-text';const lab=document.createElement('div');lab.className='label';lab.textContent=label;const small=document.createElement('div');small.className='stat-sub';small.textContent=sub;text.append(lab,small);const number=document.createElement('div');number.className='count';number.textContent=n;el.append(text,number);el.onclick=()=>filterList(filter);return el;}));
+  $('today').textContent=state.pending.length?`${state.pending.length} modifiche da inviare al negozio`:expired+urgent?`${expired+urgent} prodotti urgenti da controllare`:'Niente in sospeso per oggi';
+  $('home-signal').hidden=profile.role==='operator';renderScannerResults();
 }
 function conditionText() {const s=$('detail-supplier').value;const match=Object.entries(conditions).find(([key])=>key===s || s.includes(key));$('supplier-condition').textContent=match?'Condizioni fornitore: '+(typeof match[1]==='string'?match[1]:JSON.stringify(match[1])):'';}
 async function openProduct(p) {
   requireUser();selected={...p};$('detail-title').textContent=p.name || 'Nuovo prodotto';$('ean').value=p.ean || '';$('ean').readOnly=!!p.ean;
-  $('name').value=p.name || '';$('detail-supplier').value=p.supplier || '';$('expiry').value=p.expiry || '';$('no-expiry').checked=!!p.noExpiry;$('expiry').disabled=!!p.noExpiry;$('state').value=p.managed?'managed':p.signaled?'signaled':'';$('absent').checked=!!p.absent;$('note').value=p.note || '';$('detail-status').textContent='';$('history').replaceChildren();conditionText();
+  $('name').value=p.name || '';$('detail-supplier').value=p.supplier || '';$('expiry').value=p.expiry || '';$('no-expiry').checked=!!p.noExpiry;$('expiry').disabled=!!p.noExpiry;$('state').value=p.managed?'managed':p.signaled?'signaled':'';$('absent').checked=!!p.absent;$('note').value=p.note || '';$('detail-status').textContent='';$('history').replaceChildren();$('detail-badge').replaceChildren();if(p.ean){const tag=document.createElement('span');tag.className='badge '+(p.managed?'gestito':p.signaled?'signaled':'nodate');tag.textContent=badge(p)[0];$('detail-badge').append(tag);}conditionText();
   const op=state.pending.find(x=>x.product.ean===p.ean);$('discard-pending').hidden=!op;
   if(op?.error)$('detail-status').textContent=op.error;
   if(!$('detail').open)$('detail').showModal();
@@ -109,12 +137,12 @@ async function discardPending() {
 }
 async function loadMessages(epoch=generation) {
   const {data,error}=await client.from('sl_messages').select('id,body,created_at,author_id').eq('store_id',C.STORE).order('id',{ascending:false}).limit(100);if(error)throw error;if(epoch!==generation || !user)return;
-  $('messages').replaceChildren(...data.map(row=>{const el=document.createElement('article');el.className='message';const body=document.createElement('p');body.textContent=row.body;const date=document.createElement('small');date.textContent=new Date(row.created_at).toLocaleString('it-IT');el.append(body,date);return el;}));
+  $('messages').replaceChildren(...data.map(row=>{const el=document.createElement('article');el.className='bacheca-card';const body=document.createElement('p');body.textContent=row.body;const date=document.createElement('small');date.textContent=new Date(row.created_at).toLocaleString('it-IT');el.append(body,date);return el;}));
 }
-async function stopScanner() {if(scanner){try{await scanner.stop();}catch{}try{scanner.clear();}catch{}scanner=null;}$('scanner').hidden=true;}
+async function stopScanner() {if(scanner){try{await scanner.stop();}catch{}try{scanner.clear();}catch{}scanner=null;}$('scanner').hidden=true;$('stop-scan').hidden=true;$('scan').hidden=false;}
 async function startScanner() {
   requireUser();if(scanner)return;const epoch=generation;
-  try {if(!window.Html5Qrcode)throw new Error('Scanner non disponibile. Usa la ricerca manuale.');$('scanner').hidden=false;scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:140}},async text=>{if(epoch!==generation)return;const code=text.trim();const p=products.find(p=>p.ean===code);await stopScanner();if(p)openProduct(p);else{$('search').value=code;$('filter').value='all';render();toast('EAN non trovato. Puoi aggiungere il prodotto.');}},()=>{});}catch(error){await stopScanner();toast('Fotocamera: '+error.message);}
+  try {if(!window.Html5Qrcode)throw new Error('Scanner non disponibile. Usa la ricerca manuale.');$('scanner').hidden=false;$('stop-scan').hidden=false;$('scan').hidden=true;scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:140}},async text=>{if(epoch!==generation)return;const code=text.trim();const p=products.find(p=>p.ean===code);await stopScanner();if(p)openProduct(p);else{$('scanner-search').value=code;renderScannerResults();toast('EAN non trovato. Puoi aggiungere il prodotto.');}},()=>{});}catch(error){await stopScanner();toast('Fotocamera: '+error.message);}
 }
 function download(name,body,type) {const url=URL.createObjectURL(new Blob([body],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 async function changePassword(event) {
@@ -122,12 +150,22 @@ async function changePassword(event) {
   try {const next=$('new-password').value;if(next.length<12 || next!==$('confirm-password').value)throw new Error('Usa almeno 12 caratteri e verifica la conferma.');const {data,error}=await client.auth.signInWithPassword({email:user.email,password:$('old-password').value});if(error || data.user?.id!==user.id)throw new Error('Password attuale non corretta o connessione non disponibile.');if(epoch!==generation)return;const result=await client.auth.updateUser({password:next});if(result.error)throw result.error;event.target.reset();toast('Password aggiornata.');}catch(error){toast(error.message);}finally{button.disabled=false;}
 }
 function wire() {
-  document.querySelectorAll('[data-operator]').forEach(b=>b.onclick=()=>showLogin(b.dataset.operator));$('admin-login').onclick=()=>showLogin(null);$('login-back').onclick=()=>{$('login-form').hidden=true;$('password').value='';};$('login-form').onsubmit=login;$('logout').onclick=signOut;$('sync').onclick=sync;
+  document.querySelectorAll('[data-operator]').forEach(b=>b.onclick=()=>showLogin(b.dataset.operator));$('admin-login').onclick=()=>showLogin(null);$('login-back').onclick=()=>{$('login-form').hidden=true;$('operator-grid').hidden=false;$('password').value='';};$('login-form').onsubmit=login;$('logout').onclick=signOut;$('sync').onclick=sync;
   ['search','filter','supplier'].forEach(id=>$(id).addEventListener(id==='search'?'input':'change',()=>{limit=100;render();}));$('show-more').onclick=()=>{limit+=100;render();};
   $('add-product').onclick=()=>openProduct({version:0});$('product-form').onsubmit=saveProduct;$('close-detail').onclick=()=>{$('detail').close();selected=null;};$('discard-pending').onclick=discardPending;
   $('no-expiry').onchange=()=>{$('expiry').disabled=$('no-expiry').checked;if($('no-expiry').checked){$('expiry').value='';$('state').value='';}};$('detail-supplier').onchange=conditionText;
   $('scan').onclick=startScanner;$('stop-scan').onclick=stopScanner;
-  document.querySelectorAll('[data-view]').forEach(button=>button.onclick=async()=>{await stopScanner();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b===button));['products','board','settings'].forEach(view=>$('view-'+view).hidden=view!==button.dataset.view);if(button.dataset.view==='board')try{await loadMessages();}catch(error){toast(error.message);}});
+  document.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>navigate(button.dataset.view));
+  $('logo-menu').onclick=()=>{const show=$('logo-dropdown').hidden;$('logo-dropdown').hidden=!show;$('logo-menu').setAttribute('aria-expanded',String(show));};
+  $('identity').onclick=()=>navigate('settings');$('home-scan').onclick=()=>navigate('scanner');$('home-signal').onclick=()=>filterList('unsignaled');$('absent-menu').onclick=()=>filterList('absent');
+  $('scanner-search').oninput=renderScannerResults;$('scanner-add').onclick=()=>openProduct({version:0});
+  document.querySelectorAll('[data-filter]').forEach(button=>button.onclick=()=>filterList(button.dataset.filter));
+  $('new-message').onclick=()=>{$('message-form').hidden=false;$('message').focus();};$('cancel-message').onclick=()=>{$('message-form').hidden=true;};
+  $('board-search').oninput=()=>{const q=$('board-search').value.toLowerCase();$('messages').querySelectorAll('article').forEach(el=>el.hidden=!el.textContent.toLowerCase().includes(q));};
+  const pref='petstore-san-lorenzo-';
+  function theme(value){document.documentElement.setAttribute('data-theme',value);localStorage.setItem(pref+'theme',value);$('theme-light').classList.toggle('active',value==='light');$('theme-dark').classList.toggle('active',value==='dark');}
+  function density(value){document.documentElement.setAttribute('data-density',value);localStorage.setItem(pref+'density',value);$('density-comfy').classList.toggle('active',value==='comfy');$('density-compact').classList.toggle('active',value==='compact');}
+  $('theme-light').onclick=()=>theme('light');$('theme-dark').onclick=()=>theme('dark');$('density-comfy').onclick=()=>density('comfy');$('density-compact').onclick=()=>density('compact');theme(localStorage.getItem(pref+'theme')||'light');density(localStorage.getItem(pref+'density')||'comfy');
   $('message-form').onsubmit=async event=>{event.preventDefault();requireUser();const epoch=generation;event.submitter.disabled=true;try{const {error}=await client.from('sl_messages').insert({store_id:C.STORE,author_id:user.id,body:$('message').value.trim()});if(error)throw error;if(epoch!==generation)return;$('message').value='';await loadMessages();toast('Messaggio pubblicato.');}catch(error){toast('Messaggio non pubblicato: '+error.message);}finally{event.submitter.disabled=false;}};
   $('password-form').onsubmit=changePassword;$('print').onclick=()=>window.print();
   $('export-csv').onclick=()=>{requireUser();const rows=[['EAN','Nome','Fornitore','Scadenza','Segnalato','Gestito','Senza scadenza','Non in negozio','Note'],...filtered().map(p=>[p.ean,p.name,p.supplier,p.expiry,p.signaled,p.managed,p.noExpiry,p.absent,p.note])];download('san-lorenzo-scadenze.csv','\ufeff'+rows.map(row=>row.map(C.csvCell).join(';')).join('\r\n'),'text/csv;charset=utf-8');};
